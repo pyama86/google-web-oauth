@@ -1,6 +1,6 @@
 builds:
-  - id: pam-google-web-oauth
-    binary: pam-google-web-oauth
+  - id: google-web-oauth
+    binary: google-web-oauth
     goos:
       - linux
     goarch:
@@ -9,11 +9,11 @@ builds:
       -X main.Version={{.Version}}
 nfpms:
   -
-    id: pam-google-web-oauth-nfpms
+    id: google-web-oauth-nfpms
     name_template: "{{ .ProjectName }}_{{ .Version }}-1_{{ .Arch }}"
     builds:
-    - pam-google-web-oauth
-    homepage: https://github.com/pyama86/pam-google-web-oauth
+    - google-web-oauth
+    homepage: https://github.com/pyama86/google-web-oauth
     maintainer: pyama86 <www.kazu.com@gmail.com>
     description: pam module by google oauth
     license: MIT

@@ -10,14 +10,14 @@ import (
 func TestRun_versionFlag(t *testing.T) {
 	outStream, errStream := new(bytes.Buffer), new(bytes.Buffer)
 	cli := &CLI{outStream: outStream, errStream: errStream}
-	args := strings.Split("./pam-google-web-oauth -version", " ")
+	args := strings.Split("./google-web-oauth -version", " ")
 
 	status := cli.Run(args)
 	if status != ExitCodeOK {
 		t.Errorf("expected %d to eq %d", status, ExitCodeOK)
 	}
 
-	expected := fmt.Sprintf("pam-google-web-oauth version %s", Version)
+	expected := fmt.Sprintf("google-web-oauth version %s", Version)
 	if !strings.Contains(errStream.String(), expected) {
 		t.Errorf("expected %q to eq %q", errStream.String(), expected)
 	}
@@ -26,7 +26,7 @@ func TestRun_versionFlag(t *testing.T) {
 func TestRun_configFlag(t *testing.T) {
 	outStream, errStream := new(bytes.Buffer), new(bytes.Buffer)
 	cli := &CLI{outStream: outStream, errStream: errStream}
-	args := strings.Split("./pam-google-web-oauth -config", " ")
+	args := strings.Split("./google-web-oauth -config", " ")
 
 	status := cli.Run(args)
 	_ = status

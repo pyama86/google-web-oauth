@@ -7,13 +7,14 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
 	"net/url"
 	"os"
 	"os/user"
 	"path/filepath"
+	"syscall"
 
 	"github.com/sirupsen/logrus"
+	"golang.org/x/crypto/ssh/terminal"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 )
@@ -41,8 +42,8 @@ func (cli *CLI) Run(args []string) int {
 	flags := flag.NewFlagSet(Name, flag.ContinueOnError)
 	flags.SetOutput(cli.errStream)
 
-	flags.StringVar(&config, "config", "/etc/pam-google-web-oauth/client_secret.json", "Config file path")
-	flags.StringVar(&config, "c", "/etc/pam-google-web-oauth/client_secret.json", "Config file path(Short)")
+	flags.StringVar(&config, "config", "/etc/google-web-oauth/client_secret.json", "Config file path")
+	flags.StringVar(&config, "c", "/etc/google-web-oauth/client_secret.json", "Config file path(Short)")
 
 	flags.BoolVar(&version, "version", false, "Print version information and quit.")
 
@@ -67,12 +68,12 @@ func (cli *CLI) run(config string) error {
 	ctx := context.Background()
 	b, err := ioutil.ReadFile(config)
 	if err != nil {
-		log.Fatalf("Unable to read client secret file: %s", config)
+		return fmt.Errorf("Unable to read client secret file: %s", config)
 	}
 
 	gconfig, err := google.ConfigFromJSON(b, "profile")
 	if err != nil {
-		fmt.Errorf("Unable to parse client secret file to config: %v", err)
+		return fmt.Errorf("Unable to parse client secret file to config: %v", err)
 	}
 	err = auth(ctx, gconfig)
 	if err != nil {
@@ -104,12 +105,12 @@ func getTokenFromWeb(c *oauth2.Config) (*oauth2.Token, error) {
 	fmt.Printf("Go to the following link in your browser then type the "+
 		"authorization code: \n\n%v\n\nPlease type code:", authURL)
 
-	var code string
-	if _, err := fmt.Scan(&code); err != nil {
+	code, err := terminal.ReadPassword(int(syscall.Stdin))
+	if err != nil {
 		return nil, fmt.Errorf("Unable to read authorization code %v", err)
 	}
 
-	tok, err := c.Exchange(oauth2.NoContext, code)
+	tok, err := c.Exchange(oauth2.NoContext, string(code))
 	if err != nil {
 		return nil, fmt.Errorf("Unable to retrieve token from web %v", err)
 	}
@@ -117,9 +118,9 @@ func getTokenFromWeb(c *oauth2.Config) (*oauth2.Token, error) {
 }
 
 func tokenCacheFile() (string, error) {
-	userInfo, err := user.Lookup(os.Getenv("PAM_USER"))
+	userInfo, err := user.Lookup(os.Getenv("USER"))
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("user lookup error %s %s", os.Getenv("USER"), err.Error())
 	}
 	tokenCacheDir := filepath.Join(userInfo.HomeDir, ".credentials")
 	err = os.MkdirAll(tokenCacheDir, 0700)
@@ -141,10 +142,9 @@ func tokenFromFile(file string) (*oauth2.Token, error) {
 }
 
 func saveToken(file string, token *oauth2.Token) error {
-	fmt.Printf("Saving credential file to: %s\n", file)
 	f, err := os.OpenFile(file, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
 	if err != nil {
-		log.Fatalf("Unable to cache oauth token: %v", err)
+		return err
 	}
 	defer f.Close()
 	return json.NewEncoder(f).Encode(token)

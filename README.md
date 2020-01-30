@@ -1,4 +1,4 @@
-# pam-google-web-oauth
+# google-web-oauth
 
 
 
@@ -11,12 +11,12 @@
 To install, use `go get`:
 
 ```bash
-$ go get -d github.com/pyama86/pam-google-web-oauth
+$ go get -d github.com/pyama86/google-web-oauth
 ```
 
 ## Contribution
 
-1. Fork ([https://github.com/pyama86/pam-google-web-oauth/fork](https://github.com/pyama86/pam-google-web-oauth/fork))
+1. Fork ([https://github.com/pyama86/google-web-oauth/fork](https://github.com/pyama86/google-web-oauth/fork))
 1. Create a feature branch
 1. Commit your changes
 1. Rebase your local changes against the master branch

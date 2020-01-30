@@ -3,15 +3,19 @@ REVISION := $(shell git rev-parse --short HEAD)
 INFO_COLOR=\033[1;34m
 RESET=\033[0m
 BOLD=\033[1m
+
 ifeq ("$(shell uname)","Darwin")
-GO ?= GO111MODULE=on go
+GO ?= go
 else
 GO ?= GO111MODULE=on /usr/local/go/bin/go
 endif
 
+
 TEST ?= $(shell $(GO) list ./... | grep -v -e vendor -e keys -e tmp)
+linux_build:
+	docker run -v `pwd`:/go/src/github.com/pyama86/google-web-oauth -v $(GOPATH):/go -w /go/src/github.com/pyama86/google-web-oauth golang:latest make build
 build:
-	$(GO) build -o pam-google-web-oauth -ldflags "-X main.Version=$(VERSION)-$(REVISION)"
+	$(GO) build -o builds/google-web-oauth -ldflags "-X main.Version=$(VERSION)-$(REVISION)"
 
 deps:
 	go get -u golang.org/x/lint/golint
@@ -19,9 +23,6 @@ deps:
 git-semv:
 	brew tap linyows/git-semv
 	brew install git-semv
-
-goreleaser:
-	which goreleaser || (brew install goreleaser/tap/goreleaser && brew install goreleaser)
 
 ci: unit_test lint
 lint: deps
@@ -40,3 +41,10 @@ release: goreleaser
 	goreleaser --rm-dist
 run:
 	$(GO) run main.go version.go cli.go
+
+github_release:
+	git semv patch --bump
+	ghr --replace v$(VERSION) builds/
+
+docker:
+	docker build -t pyama:google-web-oauth .
