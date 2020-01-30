@@ -11,7 +11,7 @@ endif
 
 TEST ?= $(shell $(GO) list ./... | grep -v -e vendor -e keys -e tmp)
 build:
-	$(GO) build -o nke  -ldflags "-X main.Version=$(VERSION)-$(REVISION)"
+	$(GO) build -o pam-google-web-oauth -ldflags "-X main.Version=$(VERSION)-$(REVISION)"
 
 deps:
 	go get -u golang.org/x/lint/golint
