@@ -21,8 +21,7 @@ git-semv:
 	brew install git-semv
 
 goreleaser:
-	brew install goreleaser/tap/goreleaser
-	brew install goreleaser
+	which goreleaser || (brew install goreleaser/tap/goreleaser && brew install goreleaser)
 
 ci: unit_test lint
 lint: deps
@@ -36,7 +35,7 @@ unit_test: ## Run test
 	$(GO) tool cover -func cover.out
 	$(GO) test -race $(TEST)
 
-release: releasedeps
+release: goreleaser
 	git semv patch --bump
 	goreleaser --rm-dist
 run:
