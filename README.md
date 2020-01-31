@@ -4,7 +4,7 @@ google-web-oauth is ssh authentication software.
 this provides you with multi-factor authentication.
 
 
-![demo](https://github.com/pyama86/google-web-auth/blob/media/demo.gif)
+![demo](https://github.com/pyama86/google-web-auth/blob/master/media/demo.gif)
 
 ## Usage
 
