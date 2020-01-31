@@ -125,9 +125,13 @@ func getTokenFromWeb(c *oauth2.Config) (*oauth2.Token, error) {
 }
 
 func tokenCacheFile() (string, error) {
-	userInfo, err := user.Lookup(os.Getenv("USER"))
+	uname := os.Getenv("USER")
+	if os.Getenv("SUDO_USER") != "" {
+		uname = os.Getenv("SUDO_USER")
+	}
+	userInfo, err := user.Lookup(uname)
 	if err != nil {
-		return "", fmt.Errorf("user lookup error %s %s", os.Getenv("USER"), err.Error())
+		return "", fmt.Errorf("user lookup error %s %s", uname, err.Error())
 	}
 	tokenCacheDir := filepath.Join(userInfo.HomeDir, ".credentials")
 	err = os.MkdirAll(tokenCacheDir, 0700)
