@@ -3,6 +3,9 @@
 google-web-oauth is ssh authentication software.
 this provides you with multi-factor authentication.
 
+
+![demo](https://github.com/pyama86/google-web-auth/blob/media/demo.gif)
+
 ## Usage
 
 1. Get the oAuth client ID on google.
