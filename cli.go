@@ -90,14 +90,21 @@ func auth(ctx context.Context, c *oauth2.Config) error {
 		return err
 	}
 	tok, err := tokenFromFile(cacheFile)
-	if err != nil || !tok.Valid() {
-		tok, err := getTokenFromWeb(c)
+	// tokenがすでに存在する場合は延長を試みる
+	if tok != nil && !tok.Valid() {
+		tokenSource := c.TokenSource(oauth2.NoContext, tok)
+		_ = oauth2.NewClient(oauth2.NoContext, tokenSource)
+		tok, err = tokenSource.Token()
+	}
+
+	if err != nil {
+		tok, err = getTokenFromWeb(c)
 		if err != nil {
 			return err
 		}
-		return saveToken(cacheFile, tok)
 	}
-	return nil
+
+	return saveToken(cacheFile, tok)
 }
 
 func getTokenFromWeb(c *oauth2.Config) (*oauth2.Token, error) {
