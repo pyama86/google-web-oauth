@@ -1,10 +1,17 @@
 # google-web-oauth
-
-
-
 ## Description
+google-web-oauth is ssh authentication software.
+this provides you with multi-factor authentication.
 
 ## Usage
+
+1. Get the oAuth client ID on google.
+2. Please place the secret file to `/etc/google-web-oauth/client-secret.json`
+3. Write the following in sshd_config and restart sshd process.
+
+```
+ForceCommand sudo /usr/bin/google-web-oauth && eval ${SSH_ORIGINAL_COMMAND:-/bin/bash}
+```
 
 ## Install
 
