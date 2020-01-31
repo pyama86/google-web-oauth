@@ -11,12 +11,13 @@ this provides you with multi-factor authentication.
 2. Please place the secret file to `/etc/google-web-oauth/client_secret.json`
 3. Write the following in sshd_config and restart sshd process.
 
-## blog
-- [SSHログイン時に公開鍵認証とGoogle OAuthで多要素認証する](https://ten-snapon.com/archives/2306)
-
 ```
 ForceCommand sudo /usr/bin/google-web-oauth && eval ${SSH_ORIGINAL_COMMAND:-/bin/bash}
 ```
+
+
+## blog
+- [SSHログイン時に公開鍵認証とGoogle OAuthで多要素認証する](https://ten-snapon.com/archives/2306)
 
 ## Install
 
