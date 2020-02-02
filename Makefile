@@ -15,7 +15,7 @@ TEST ?= $(shell $(GO) list ./... | grep -v -e vendor -e keys -e tmp)
 linux_build:
 	docker run -v `pwd`:/go/src/github.com/pyama86/google-web-oauth -v $(GOPATH):/go -w /go/src/github.com/pyama86/google-web-oauth golang:latest make build
 build:
-	$(GO) build -o builds/google-web-oauth -ldflags "-X main.Version=$(VERSION)-$(REVISION)"
+	$(GO) build -o builds/google-web-oauth -ldflags "-s -w -X main.Version=$(VERSION)-$(REVISION)"
 
 deps:
 	go get -u golang.org/x/lint/golint

@@ -11,12 +11,14 @@ import (
 	"os"
 	"os/user"
 	"path/filepath"
+	"strings"
 	"syscall"
 
 	"github.com/sirupsen/logrus"
 	"golang.org/x/crypto/ssh/terminal"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
+	oauthapi "google.golang.org/api/oauth2/v2"
 )
 
 // Exit codes are int values that represent an exit code for a particular error.
@@ -89,39 +91,45 @@ func auth(ctx context.Context, c *oauth2.Config) error {
 	if err != nil {
 		return err
 	}
+
 	tok, err := tokenFromFile(cacheFile)
-	// tokenがすでに存在する場合は延長を試みる
-	if tok != nil && !tok.Valid() {
-		tokenSource := c.TokenSource(oauth2.NoContext, tok)
-		_ = oauth2.NewClient(oauth2.NoContext, tokenSource)
-		tok, err = tokenSource.Token()
+	if err != nil {
+		return getTokenFromWebAndSaveFile(c, cacheFile)
 	}
 
-	if err != nil {
-		tok, err = getTokenFromWeb(c)
+	if tok.OAuthToken == nil || tok.LastIP != lastIP() {
+		return getTokenFromWebAndSaveFile(c, cacheFile)
+	} else {
+		client := oauth2.NewClient(oauth2.NoContext, c.TokenSource(oauth2.NoContext, tok.OAuthToken))
+		svr, err := oauthapi.New(client)
 		if err != nil {
-			return err
+			return getTokenFromWebAndSaveFile(c, cacheFile)
+		}
+
+		_, err = svr.Userinfo.Get().Do()
+		if err != nil {
+			return getTokenFromWebAndSaveFile(c, cacheFile)
 		}
 	}
 
-	return saveToken(cacheFile, tok)
+	return nil
 }
 
-func getTokenFromWeb(c *oauth2.Config) (*oauth2.Token, error) {
+func getTokenFromWebAndSaveFile(c *oauth2.Config, cacheFile string) error {
 	authURL := c.AuthCodeURL("state-token", oauth2.AccessTypeOffline)
 	fmt.Printf("Go to the following link in your browser then type the "+
 		"authorization code: \n\n%v\n\nPlease type code:", authURL)
 
 	code, err := terminal.ReadPassword(int(syscall.Stdin))
 	if err != nil {
-		return nil, fmt.Errorf("Unable to read authorization code %v", err)
+		return fmt.Errorf("Unable to read authorization code %v", err)
 	}
 
 	tok, err := c.Exchange(oauth2.NoContext, string(code))
 	if err != nil {
-		return nil, fmt.Errorf("Unable to retrieve token from web %v", err)
+		return fmt.Errorf("Unable to retrieve token from web %v", err)
 	}
-	return tok, nil
+	return saveToken(cacheFile, tok)
 }
 
 func tokenCacheFile() (string, error) {
@@ -141,15 +149,21 @@ func tokenCacheFile() (string, error) {
 	return filepath.Join(tokenCacheDir, url.QueryEscape("google_oauth.json")), nil
 }
 
-func tokenFromFile(file string) (*oauth2.Token, error) {
+type tokenCache struct {
+	OAuthToken *oauth2.Token
+	LastIP     string
+}
+
+func tokenFromFile(file string) (*tokenCache, error) {
 	f, err := os.Open(file)
 	if err != nil {
 		return nil, err
 	}
-	t := &oauth2.Token{}
-	err = json.NewDecoder(f).Decode(t)
+
+	tc := &tokenCache{}
+	err = json.NewDecoder(f).Decode(tc)
 	defer f.Close()
-	return t, err
+	return tc, err
 }
 
 func saveToken(file string, token *oauth2.Token) error {
@@ -157,6 +171,14 @@ func saveToken(file string, token *oauth2.Token) error {
 	if err != nil {
 		return err
 	}
+
+	tc := tokenCache{
+		OAuthToken: token,
+		LastIP:     lastIP(),
+	}
 	defer f.Close()
-	return json.NewEncoder(f).Encode(token)
+	return json.NewEncoder(f).Encode(tc)
+}
+func lastIP() string {
+	return strings.Split(os.Getenv("SSH_CONNECTION"), " ")[0]
 }
