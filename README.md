@@ -12,7 +12,7 @@ this provides you with multi-factor authentication.
 3. Write the following in sshd_config and restart sshd process.
 
 ```
-ForceCommand sudo /usr/bin/google-web-oauth && eval ${SSH_ORIGINAL_COMMAND:-/bin/bash}
+ForceCommand sudo SSH_CONNECTION="$SSH_CONNECTION" /usr/bin/google-web-oauth && eval ${SSH_ORIGINAL_COMMAND:-/bin/bash}
 ```
 
 
