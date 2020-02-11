@@ -108,6 +108,7 @@ int pam_sm_authenticate(pam_handle_t *pamh, int flags, int argc, const char **ar
 {
   char buf[MAXBUF], res[MAXBUF];
   int ret = exec_cmd(pamh, "/usr/bin/google-web-oauth", "-only-url", res);
+
   if (ret != 0) {
     return PAM_AUTHINFO_UNAVAIL;
   }
