@@ -51,20 +51,35 @@ static char *request_pass(pam_handle_t *pamh, int echocode, PAM_CONST char *prom
   return ret;
 }
 
-int exec_cmd(const char *user, char *cmd, char *arg, char *res)
+int exec_cmd(pam_handle_t *pamh, char *cmd, char *arg, char *res)
 {
+  const char *user;
+  const void *void_from = NULL;
+  const char *from;
   FILE *fp;
   char *c;
+  char user_env[MAXBUF], host_env[MAXBUF];
   char buf[MAXBUF];
+  if (pam_get_user(pamh, &user, NULL) != PAM_SUCCESS || user == NULL || *user == '\0') {
+    return PAM_USER_UNKNOWN;
+  }
+  sprintf(user_env, "USER=%s", user);
+  putenv(user_env);
+
+  if (pam_get_item(pamh, PAM_RHOST, &void_from) != PAM_SUCCESS) {
+    return PAM_ABORT;
+  }
+
+  from = void_from;
+  sprintf(host_env, "SSH_CONNECTION=%s", from);
+  putenv(host_env);
+
   if (arg != NULL) {
     c = malloc(strlen(cmd) + strlen(arg) + 2);
     sprintf(c, "%s %s", cmd, arg);
   } else {
     c = cmd;
   }
-
-  sprintf(buf, "USER=%s", user);
-  putenv(buf);
 
   if ((fp = popen(c, "r")) == NULL) {
     goto err;
@@ -91,16 +106,9 @@ err:
 
 int pam_sm_authenticate(pam_handle_t *pamh, int flags, int argc, const char **argv)
 {
-  const char *user;
-  int retval;
   char buf[MAXBUF], res[MAXBUF];
-  retval = pam_get_item(pamh, PAM_USER, (void *)&user);
+  int ret = exec_cmd(pamh, "/usr/bin/google-web-oauth", "-only-url", res);
 
-  if (retval != PAM_SUCCESS) {
-    return retval;
-  }
-
-  int ret = exec_cmd(user, "/usr/bin/google-web-oauth", "-only-url", res);
   if (ret != 0) {
     return PAM_AUTHINFO_UNAVAIL;
   }
@@ -112,7 +120,7 @@ int pam_sm_authenticate(pam_handle_t *pamh, int flags, int argc, const char **ar
   }
 
   sprintf(buf, "-code %s", code);
-  ret = exec_cmd(user, "/usr/bin/google-web-oauth", buf, res);
+  ret = exec_cmd(pamh, "/usr/bin/google-web-oauth", buf, res);
   if (ret != 0) {
     goto err;
   }
