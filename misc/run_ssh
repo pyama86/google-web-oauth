@@ -1,0 +1,5 @@
+#!/bin/bash
+rsyslogd &
+sleep 1
+tail -f /var/log/syslog &
+/usr/sbin/sshd -d
