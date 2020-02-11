@@ -6,15 +6,41 @@ this provides you with multi-factor authentication.
 
 ![demo](https://github.com/pyama86/google-web-oauth/blob/master/media/demo.gif)
 ## Usage
+### USE PAM
+for ubuntu
 
 1. Get the oAuth client ID on google.
 2. Please place the secret file to `/etc/google-web-oauth/client_secret.json`
-3. Write the following in sshd_config and restart sshd process.
+3. set binary.
+   - /lib/x86_64-linux-gnu/security/google-web-oauth.so
+   - /usr/bin/google-web-oauth
+4. Write the following in /etc/pam.d/sshd
+```
+auth    required google-web-oauth.so
+#@include common-auth # must comment out.
+```
+
+5. Write the following in sshd_config and restart sshd process.
+
+```
+KbdInteractiveAuthentication yes
+UsePAM yes
+AuthenticationMethods publickey,keyboard-interactive
+```
+
+### USE SSH
+
+> In this case, they skip ForceCommand when use ProxyCommand, it is vulnerable...
+
+1. Get the oAuth client ID on google.
+2. Please place the secret file to `/etc/google-web-oauth/client_secret.json`
+3. set binary.
+   - /usr/bin/google-web-oauth
+4. Write the following in sshd_config and restart sshd process.
 
 ```
 ForceCommand sudo SSH_CONNECTION="$SSH_CONNECTION" /usr/bin/google-web-oauth && eval ${SSH_ORIGINAL_COMMAND:-/bin/bash}
 ```
-
 
 ## blog
 - [SSHログイン時に公開鍵認証とGoogle OAuthで多要素認証する](https://ten-snapon.com/archives/2306)
