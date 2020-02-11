@@ -1,3 +1,4 @@
 *.test
 dist
 builds
+misc/secret.json

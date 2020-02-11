@@ -10,12 +10,37 @@ else
 GO ?= GO111MODULE=on /usr/local/go/bin/go
 endif
 
+CC=gcc
+CFLAGS=-Wall -Wstrict-prototypes -Werror -fPIC -std=c99 -D_GNU_SOURCE
+LD_SONAME=-Wl,-soname,pam_google_web_oauth.so.2
+LIBRARY=pam_google_web_oauth.so.2.0
 
 TEST ?= $(shell $(GO) list ./... | grep -v -e vendor -e keys -e tmp)
+
+ssh_container:
+	docker build -f SSHDockerfile -t ssh .
+	docker run --privileged \
+	  -v `pwd`/builds/pam_google_web_oauth.so.2.0:/lib/x86_64-linux-gnu/security/google-web-oauth.so \
+	  -v `pwd`/builds/google-web-oauth:/usr/bin/google-web-oauth \
+	  -v `pwd`/misc/secret.json:/etc/google-web-oauth/client_secret.json \
+	  -v $(HOME)/.ssh/id_rsa.pub:/root/.ssh/authorized_keys \
+	  -p 10022:22 ssh
+
 linux_build:
 	docker run -v `pwd`:/go/src/github.com/pyama86/google-web-oauth -v $(GOPATH):/go -w /go/src/github.com/pyama86/google-web-oauth golang:latest make build
+
+linux_pam_build:
+	docker build -t pam -f dockerfiles/Dockerfile.ubuntu16 .
+	docker run -v `pwd`:/go/src/github.com/pyama86/google-web-oauth -v $(GOPATH):/go -w /go/src/github.com/pyama86/google-web-oauth pam make pam_build
+
 build:
 	$(GO) build -o builds/google-web-oauth -ldflags "-s -w -X main.Version=$(VERSION)-$(REVISION)"
+
+pam_build:
+	@echo "$(INFO_COLOR)==> $(RESET)$(BOLD)Building nss_stns$(RESET)"
+	$(CC) $(CFLAGS) -c pam/pam.c -o $(BUILD)/pam.o
+	$(CC) $(LDFLAGS) -shared $(LD_SONAME) -o builds/$(LIBRARY) \
+		$(BUILD)/pam.o
 
 deps:
 	go get -u golang.org/x/lint/golint

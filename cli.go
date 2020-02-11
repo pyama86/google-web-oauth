@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -39,6 +38,8 @@ func (cli *CLI) Run(args []string) int {
 	var (
 		config  string
 		version bool
+		onlyURL bool
+		code    string
 	)
 
 	flags := flag.NewFlagSet(Name, flag.ContinueOnError)
@@ -48,6 +49,9 @@ func (cli *CLI) Run(args []string) int {
 	flags.StringVar(&config, "c", "/etc/google-web-oauth/client_secret.json", "Config file path(Short)")
 
 	flags.BoolVar(&version, "version", false, "Print version information and quit.")
+
+	flags.BoolVar(&onlyURL, "only-url", false, "only show url")
+	flags.StringVar(&code, "code", "", "auth code from web")
 
 	// Parse commandline flag
 	if err := flags.Parse(args[1:]); err != nil {
@@ -59,34 +63,24 @@ func (cli *CLI) Run(args []string) int {
 		fmt.Fprintf(cli.errStream, "%s version %s\n", Name, Version)
 		return ExitCodeOK
 	}
-	if err := cli.run(config); err != nil {
+	if err := cli.run(config, onlyURL, []byte(code)); err != nil {
 		logrus.Error(err)
 		return ExitCodeError
 	}
 	return ExitCodeOK
 
 }
-func (cli *CLI) run(config string) error {
-	ctx := context.Background()
+func (cli *CLI) run(config string, onlyURL bool, code []byte) error {
 	b, err := ioutil.ReadFile(config)
 	if err != nil {
 		return fmt.Errorf("Unable to read client secret file: %s", config)
 	}
 
-	gconfig, err := google.ConfigFromJSON(b, "profile")
+	c, err := google.ConfigFromJSON(b, "profile")
 	if err != nil {
 		return fmt.Errorf("Unable to parse client secret file to config: %v", err)
 	}
-	err = auth(ctx, gconfig)
-	if err != nil {
-		return err
-	}
 
-	return nil
-
-}
-
-func auth(ctx context.Context, c *oauth2.Config) error {
 	cacheFile, err := tokenCacheFile()
 	if err != nil {
 		return err
@@ -94,35 +88,44 @@ func auth(ctx context.Context, c *oauth2.Config) error {
 
 	tok, err := tokenFromFile(cacheFile)
 	if err != nil {
-		return getTokenFromWebAndSaveFile(c, cacheFile)
+		goto web
 	}
 
 	if tok.OAuthToken == nil || tok.LastIP != lastIP() {
-		return getTokenFromWebAndSaveFile(c, cacheFile)
+		goto web
 	} else {
 		client := oauth2.NewClient(oauth2.NoContext, c.TokenSource(oauth2.NoContext, tok.OAuthToken))
 		svr, err := oauthapi.New(client)
 		if err != nil {
-			return getTokenFromWebAndSaveFile(c, cacheFile)
+			goto web
 		}
 
 		_, err = svr.Userinfo.Get().Do()
 		if err != nil {
-			return getTokenFromWebAndSaveFile(c, cacheFile)
+			goto web
 		}
 	}
 
 	return nil
+web:
+	return getTokenFromWebAndSaveFile(c, cacheFile, onlyURL, code)
 }
 
-func getTokenFromWebAndSaveFile(c *oauth2.Config, cacheFile string) error {
-	authURL := c.AuthCodeURL("state-token", oauth2.AccessTypeOffline)
-	fmt.Printf("Go to the following link in your browser then type the "+
-		"authorization code: \n\n%v\n\nPlease type code:", authURL)
+func getTokenFromWebAndSaveFile(c *oauth2.Config, cacheFile string, onlyURL bool, code []byte) error {
+	var err error
+	if code == nil || len(code) == 0 {
+		authURL := c.AuthCodeURL("state-token", oauth2.AccessTypeOffline)
+		fmt.Printf("Go to the following link in your browser then type the "+
+			"authorization code: \n\n%v\n\nPlease type code:", authURL)
 
-	code, err := terminal.ReadPassword(int(syscall.Stdin))
-	if err != nil {
-		return fmt.Errorf("Unable to read authorization code %v", err)
+		if onlyURL {
+			return nil
+		}
+
+		code, err = terminal.ReadPassword(int(syscall.Stdin))
+		if err != nil {
+			return fmt.Errorf("Unable to read authorization code %v", err)
+		}
 	}
 
 	tok, err := c.Exchange(oauth2.NoContext, string(code))
