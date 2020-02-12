@@ -3,6 +3,7 @@ REVISION := $(shell git rev-parse --short HEAD)
 INFO_COLOR=\033[1;34m
 RESET=\033[0m
 BOLD=\033[1m
+BUILD=builds
 
 ifeq ("$(shell uname)","Darwin")
 GO ?= go
@@ -16,6 +17,11 @@ LD_SONAME=-Wl,-soname,pam_google_web_oauth.so.2
 LIBRARY=pam_google_web_oauth.so.2.0
 
 TEST ?= $(shell $(GO) list ./... | grep -v -e vendor -e keys -e tmp)
+
+.PHONY: clean
+
+clean:
+	rm  -rf ./builds
 
 ssh_container:
 	docker build -f SSHDockerfile -t ssh .
@@ -36,11 +42,16 @@ linux_pam_build:
 build:
 	$(GO) build -o builds/google-web-oauth -ldflags "-s -w -X main.Version=$(VERSION)-$(REVISION)"
 
-pam_build:
+pam_build: clean
+	mkdir $(BUILD)
 	@echo "$(INFO_COLOR)==> $(RESET)$(BOLD)Building nss_stns$(RESET)"
 	$(CC) $(CFLAGS) -c pam/pam.c -o $(BUILD)/pam.o
 	$(CC) $(LDFLAGS) -shared $(LD_SONAME) -o builds/$(LIBRARY) \
 		$(BUILD)/pam.o
+
+pam_test: pam_build
+	$(CC) -rdynamic -o builds/pam_unittest tests/pam_unittest.c -ldl
+	./builds/pam_unittest
 
 deps:
 	go get -u golang.org/x/lint/golint
@@ -60,6 +71,10 @@ unit_test: ## Run test
 	cat cover.out.tmp | grep -v -e "main.go" -e "cmd.go" -e "_mock.go" > cover.out
 	$(GO) tool cover -func cover.out
 	$(GO) test -race $(TEST)
+
+linux_pam_test:
+	docker build -t pam -f dockerfiles/Dockerfile.ubuntu16 .
+	docker run -v `pwd`:/go/src/github.com/pyama86/google-web-oauth -v $(GOPATH):/go -w /go/src/github.com/pyama86/google-web-oauth pam make pam_test
 
 release: goreleaser
 	git semv patch --bump
