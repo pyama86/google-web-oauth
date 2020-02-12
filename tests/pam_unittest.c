@@ -31,6 +31,43 @@ static void print_diagnostics(int signo) {
   _exit(1);
 }
 
+static int converse(pam_handle_t *pamh, int nargs, const struct pam_message **message,
+                    struct pam_response **response)
+{
+  struct pam_conv *conv;
+  int retval = pam_get_item(pamh, PAM_CONV, (void *)&conv);
+  if (retval != PAM_SUCCESS) {
+    return retval;
+  }
+  return conv->conv(nargs, message, response, conv->appdata_ptr);
+}
+
+int pam_get_user(pam_handle_t *pamh, const char **user, const char *prompt) {
+  return pam_get_item(pamh, PAM_USER, (void *)user);
+}
+
+int pam_get_item(const pam_handle_t *pamh, int item_type, const void **item) {
+  switch (item_type) {
+    case PAM_SERVICE: {
+      static const char service[] = "google-web-oauth-pam-test";
+      *item = service;
+      return PAM_SUCCESS;
+    }
+    case PAM_USER: {
+      char *user = getenv("USER");
+      *item = user;
+      return PAM_SUCCESS;
+    }
+    case PAM_CONV: {
+      static struct pam_conv conv = { .conv = converse }, *p_conv = &conv;
+      *item = p_conv;
+      return PAM_SUCCESS;
+    }
+    default:
+      return PAM_BAD_ITEM;
+  }
+}
+
 int main(int argc, char *argv[]) {
   printf("Loading PAM module\n");
   pam_module = dlopen("./builds/pam_google_web_oauth.so.2.0", RTLD_NOW | RTLD_GLOBAL);
@@ -38,6 +75,8 @@ int main(int argc, char *argv[]) {
     fprintf(stderr, "dlopen(): %s\n", dlerror());
     exit(1);
   }
+
+  signal(SIGABRT, print_diagnostics);
 
   int (*pam_sm_authenticate)(pam_handle_t *, int, int, const char **) =
       (int (*)(pam_handle_t *, int, int, const char **))
