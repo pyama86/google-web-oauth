@@ -1,4 +1,4 @@
-VERSION  := $(shell git tag | tail -n1 | sed 's/v//g')
+VERSION  := $(shell git tag -l --sort=-v:refname | head -1 | sed 's/v//g')
 REVISION := $(shell git rev-parse --short HEAD)
 INFO_COLOR=\033[1;34m
 RESET=\033[0m
