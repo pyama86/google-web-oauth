@@ -125,8 +125,8 @@ int pam_sm_authenticate(pam_handle_t *pamh, int flags, int argc, const char **ar
     return PAM_ABORT;
   }
 
-  sprintf(user_env, "USER=%s", user);
-  sprintf(from_env, "SSH_CONNECTION=%s", from);
+  snprintf(user_env, MAXBUF, "USER=%s", user);
+  snprintf(from_env, MAXBUF, "SSH_CONNECTION=%s", from);
 
   int ret = popen_cmd(user_env, from_env, "/usr/bin/google-web-oauth", "-only-url", res);
   if (ret != 0) {
