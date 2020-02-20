@@ -104,6 +104,7 @@ func (cli *CLI) run(config string, onlyURL bool, code []byte) error {
 		if err != nil {
 			goto web
 		}
+		fmt.Println("auth ok with cache token")
 	}
 
 	return nil

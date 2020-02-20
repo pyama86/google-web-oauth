@@ -2,4 +2,4 @@
 rsyslogd &
 sleep 1
 tail -f /var/log/syslog &
-/usr/sbin/sshd -d
+/usr/sbin/sshd -D

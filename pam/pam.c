@@ -133,6 +133,10 @@ int pam_sm_authenticate(pam_handle_t *pamh, int flags, int argc, const char **ar
     return PAM_AUTHINFO_UNAVAIL;
   }
 
+  if (strcmp(res, "auth ok with cache token\n") == 0) {
+    // auth ok with cache token
+    return PAM_SUCCESS;
+  }
   char *code = NULL;
   code = request_pass(pamh, PAM_PROMPT_ECHO_OFF, res);
   if (!code) {
