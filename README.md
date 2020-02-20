@@ -26,6 +26,7 @@ auth    required google-web-oauth.so
 KbdInteractiveAuthentication yes
 UsePAM yes
 AuthenticationMethods publickey,keyboard-interactive
+ChallengeResponseAuthentication yes
 ```
 
 ### USE SSH
