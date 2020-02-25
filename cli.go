@@ -152,7 +152,7 @@ func tokenCacheFile() (string, error) {
 		return "", err
 	}
 	// create token dir
-	tokenCacheDir := filepath.Join("/opt/google-web-oauth", uname, ".credentials")
+	tokenCacheDir := filepath.Join("/opt/google-web-oauth", fmt.Sprintf("%s.json", uname))
 	if err := createDir(tokenCacheDir, "0", "0", 0700); err != nil {
 		return "", err
 	}
