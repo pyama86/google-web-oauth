@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/user"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"syscall"
 
@@ -145,12 +146,39 @@ func tokenCacheFile() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("user lookup error %s %s", uname, err.Error())
 	}
-	tokenCacheDir := filepath.Join(userInfo.HomeDir, ".credentials")
-	err = os.MkdirAll(tokenCacheDir, 0700)
-	if err != nil {
+
+	// create home dir
+	if err := createDir(userInfo.HomeDir, userInfo.Uid, userInfo.Gid, 0755); err != nil {
 		return "", err
 	}
+	// create token dir
+	tokenCacheDir := filepath.Join("/opt/google-web-oauth", uname, ".credentials")
+	if err := createDir(tokenCacheDir, "0", "0", 0700); err != nil {
+		return "", err
+	}
+
 	return filepath.Join(tokenCacheDir, url.QueryEscape("google_oauth.json")), nil
+}
+
+func createDir(path, uid, gid string, mode os.FileMode) error {
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		if err = os.MkdirAll(path, mode); err != nil {
+			return err
+		}
+		iuid, err := strconv.Atoi(uid)
+		if err != nil {
+			return err
+		}
+		igid, err := strconv.Atoi(gid)
+		if err != nil {
+			return err
+		}
+		if err = os.Chown(path, iuid, igid); err != nil {
+			return err
+		}
+	}
+	return nil
+
 }
 
 type tokenCache struct {
