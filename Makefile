@@ -67,7 +67,7 @@ release: goreleaser
 run:
 	$(GO) run main.go version.go cli.go
 
-github_release:
+github_release: linux_build linux_pam_build
 	git semv patch --bump
 	ghr --replace v$(VERSION) builds/
 
